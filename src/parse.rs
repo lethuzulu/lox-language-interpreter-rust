@@ -1,3 +1,4 @@
+
 use crate::{
     lex::{Token, TokenKind},
     Lexer,
@@ -347,7 +348,7 @@ impl<'de> Parser<'de> {
                     help = format!("Unexpected {token:?}"),
                     "Expected a statement",
                 }
-                .with_source_code(self.whole.to_string()))
+                    .with_source_code(self.whole.to_string()))
             }
         };
 
@@ -359,18 +360,18 @@ impl<'de> Parser<'de> {
                     .next()
                     .expect("checked Some above")
                     .expect_err("checked Err above"))
-                .wrap_err("in place of expected operator");
+                    .wrap_err("in place of expected operator");
             }
             let op = match op.map(|res| res.as_ref().expect("handled Err above")) {
                 None => break,
                 Some(Token {
-                    kind: TokenKind::LeftParen,
-                    ..
-                }) => Op::Call,
+                         kind: TokenKind::LeftParen,
+                         ..
+                     }) => Op::Call,
                 Some(Token {
-                    kind: TokenKind::Dot,
-                    ..
-                }) => Op::Field,
+                         kind: TokenKind::Dot,
+                         ..
+                     }) => Op::Field,
 
                 Some(token) => return Err(miette::miette! {
                     labels = vec![
@@ -379,7 +380,7 @@ impl<'de> Parser<'de> {
                     help = format!("Unexpected {token:?}"),
                     "Expected an operator",
                 }
-                .with_source_code(self.whole.to_string())),
+                    .with_source_code(self.whole.to_string())),
             };
 
             if let Some((l_bp, ())) = postfix_binding_power(op) {
@@ -427,80 +428,88 @@ impl<'de> Parser<'de> {
                 return Err(e).wrap_err("on left-hand side");
             }
         };
-        let mut lhs = match lhs {
-            // atoms
-            Token {
-                kind: TokenKind::String,
-                origin,
-                ..
-            } => TokenTree::Atom(Atom::String(Token::unescape(origin))),
-            Token {
-                kind: TokenKind::Number(n),
-                ..
-            } => TokenTree::Atom(Atom::Number(n)),
-            Token {
-                kind: TokenKind::True,
-                ..
-            } => TokenTree::Atom(Atom::Bool(true)),
-            Token {
-                kind: TokenKind::False,
-                ..
-            } => TokenTree::Atom(Atom::Bool(false)),
-            Token {
-                kind: TokenKind::Nil,
-                ..
-            } => TokenTree::Atom(Atom::Nil),
-            Token {
-                kind: TokenKind::Ident,
-                origin,
-                ..
-            } => TokenTree::Atom(Atom::Ident(origin)),
-            Token {
-                kind: TokenKind::Super,
-                ..
-            } => TokenTree::Atom(Atom::Super),
+        let mut lhs =
+            match lhs {
+                // atoms
+                Token {
+                    kind: TokenKind::String,
+                    origin,
+                    ..
+                } => TokenTree::Atom(Atom::String(Token::unescape(origin))),
+                Token {
+                    kind: TokenKind::Number(n),
+                    ..
+                } => TokenTree::Atom(Atom::Number(n)),
+                Token {
+                    kind: TokenKind::True,
+                    ..
+                } => TokenTree::Atom(Atom::Bool(true)),
+                Token {
+                    kind: TokenKind::False,
+                    ..
+                } => TokenTree::Atom(Atom::Bool(false)),
+                Token {
+                    kind: TokenKind::Nil,
+                    ..
+                } => TokenTree::Atom(Atom::Nil),
+                Token {
+                    kind: TokenKind::Ident,
+                    origin,
+                    ..
+                } => TokenTree::Atom(Atom::Ident(origin)),
+                Token {
+                    kind: TokenKind::Super,
+                    ..
+                } => TokenTree::Atom(Atom::Super),
 
-            Token {
-                kind: TokenKind::This,
-                ..
-            } => TokenTree::Atom(Atom::This),
+                Token {
+                    kind: TokenKind::This,
+                    ..
+                } => TokenTree::Atom(Atom::This),
 
-            // groups
-            Token {
-                kind: TokenKind::LeftParen,
-                ..
-            } => {
-                let lhs = self
-                    .parse_expression_within(0)
-                    .wrap_err("in bracketed expression")?;
-                self.lexer
-                    .expect(
-                        TokenKind::RightParen,
-                        "Unexpected end to bracketed expression",
-                    )
-                    .wrap_err("after bracketed expression")?;
-                TokenTree::Cons(Op::Group, vec![lhs])
-            }
+                // groups
+                Token {
+                    kind: TokenKind::LeftParen,
+                    ..
+                } => {
+                    let lhs = self
+                        .parse_expression_within(0)
+                        .wrap_err("in bracketed expression")?;
+                    self.lexer
+                        .expect(
+                            TokenKind::RightParen,
+                            "Unexpected end to bracketed expression",
+                        )
+                        .wrap_err("after bracketed expression")?;
+                    TokenTree::Cons(Op::Group, vec![lhs])
+                }
 
-            // unary prefix expressions
-            Token {
-                kind: TokenKind::Bang | TokenKind::Minus,
-                ..
-            } => {
-                let op = match lhs.kind {
-                    TokenKind::Bang => Op::Bang,
-                    TokenKind::Minus => Op::Minus,
-                    _ => unreachable!("by the outer match arm pattern"),
-                };
-                let ((), r_bp) = prefix_binding_power(op);
-                let rhs = self
-                    .parse_expression_within(r_bp)
-                    .wrap_err("in right-hand side")?;
-                TokenTree::Cons(op, vec![rhs])
-            }
+                // unary prefix expressions
+                Token {
+                    kind: TokenKind::Bang | TokenKind::Minus,
+                    ..
+                } => {
+                    let op = match lhs.kind {
+                        TokenKind::Bang => Op::Bang,
+                        TokenKind::Minus => Op::Minus,
+                        _ => unreachable!("by the outer match arm pattern"),
+                    };
+                    let ((), r_bp) = prefix_binding_power(op);
+                    let rhs = self
+                        .parse_expression_within(r_bp)
+                        .wrap_err("in right-hand side")?;
+                    TokenTree::Cons(op, vec![rhs])
+                }
 
-            t => panic!("bad token: {:?}", t),
-        };
+                token => return Err(miette::miette! {
+                    labels = vec![
+                        LabeledSpan::at(token.offset..token.offset + token.origin.len(), "here"),
+                    ],
+                    help = format!("Unexpected {token:?}"),
+                    "Expected an expression",
+                }
+                    .with_source_code(self.whole.to_string())),
+            };
 
         loop {
             let op = self.lexer.peek();
@@ -510,75 +519,75 @@ impl<'de> Parser<'de> {
                     .next()
                     .expect("checked Some above")
                     .expect_err("checked Err above"))
-                .wrap_err("in place of expected operator");
+                    .wrap_err("in place of expected operator");
             }
             let op = match op.map(|res| res.as_ref().expect("handled Err above")) {
                 None => break,
 
                 Some(Token {
-                    kind:
-                        TokenKind::RightParen
-                        | TokenKind::Comma
-                        | TokenKind::Semicolon
-                        | TokenKind::RightBrace,
-                    ..
-                }) => break,
+                         kind:
+                         TokenKind::RightParen
+                         | TokenKind::Comma
+                         | TokenKind::Semicolon
+                         | TokenKind::RightBrace,
+                         ..
+                     }) => break,
                 Some(Token {
-                    kind: TokenKind::LeftParen,
-                    ..
-                }) => Op::Call,
+                         kind: TokenKind::LeftParen,
+                         ..
+                     }) => Op::Call,
                 Some(Token {
-                    kind: TokenKind::Dot,
-                    ..
-                }) => Op::Field,
+                         kind: TokenKind::Dot,
+                         ..
+                     }) => Op::Field,
                 Some(Token {
-                    kind: TokenKind::Minus,
-                    ..
-                }) => Op::Minus,
+                         kind: TokenKind::Minus,
+                         ..
+                     }) => Op::Minus,
                 Some(Token {
-                    kind: TokenKind::Plus,
-                    ..
-                }) => Op::Plus,
+                         kind: TokenKind::Plus,
+                         ..
+                     }) => Op::Plus,
                 Some(Token {
-                    kind: TokenKind::Star,
-                    ..
-                }) => Op::Star,
+                         kind: TokenKind::Star,
+                         ..
+                     }) => Op::Star,
                 Some(Token {
-                    kind: TokenKind::BangEqual,
-                    ..
-                }) => Op::BangEqual,
+                         kind: TokenKind::BangEqual,
+                         ..
+                     }) => Op::BangEqual,
                 Some(Token {
-                    kind: TokenKind::EqualEqual,
-                    ..
-                }) => Op::EqualEqual,
+                         kind: TokenKind::EqualEqual,
+                         ..
+                     }) => Op::EqualEqual,
                 Some(Token {
-                    kind: TokenKind::LessEqual,
-                    ..
-                }) => Op::LessEqual,
+                         kind: TokenKind::LessEqual,
+                         ..
+                     }) => Op::LessEqual,
                 Some(Token {
-                    kind: TokenKind::GreaterEqual,
-                    ..
-                }) => Op::GreaterEqual,
+                         kind: TokenKind::GreaterEqual,
+                         ..
+                     }) => Op::GreaterEqual,
                 Some(Token {
-                    kind: TokenKind::Less,
-                    ..
-                }) => Op::Less,
+                         kind: TokenKind::Less,
+                         ..
+                     }) => Op::Less,
                 Some(Token {
-                    kind: TokenKind::Greater,
-                    ..
-                }) => Op::Greater,
+                         kind: TokenKind::Greater,
+                         ..
+                     }) => Op::Greater,
                 Some(Token {
-                    kind: TokenKind::Slash,
-                    ..
-                }) => Op::Slash,
+                         kind: TokenKind::Slash,
+                         ..
+                     }) => Op::Slash,
                 Some(Token {
-                    kind: TokenKind::And,
-                    ..
-                }) => Op::And,
+                         kind: TokenKind::And,
+                         ..
+                     }) => Op::And,
                 Some(Token {
-                    kind: TokenKind::Or,
-                    ..
-                }) => Op::Or,
+                         kind: TokenKind::Or,
+                         ..
+                     }) => Op::Or,
 
                 Some(token) => return Err(miette::miette! {
                     labels = vec![
@@ -587,7 +596,7 @@ impl<'de> Parser<'de> {
                     help = format!("Unexpected {token:?}"),
                     "Expected an infix operator",
                 }
-                .with_source_code(self.whole.to_string())),
+                    .with_source_code(self.whole.to_string())),
             };
 
             if let Some((l_bp, ())) = postfix_binding_power(op) {

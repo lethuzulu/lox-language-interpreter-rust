@@ -1,5 +1,5 @@
 use clap::{Parser, Subcommand};
-use lox_language_interpreter_rust as imp;
+use codecrafters_interpreter as imp;
 use miette::{IntoDiagnostic, WrapErr};
 use std::fs;
 use std::path::PathBuf;
@@ -20,9 +20,10 @@ enum Commands {
 
 fn main() -> miette::Result<()> {
     let args = Args::parse();
-    let mut any_cc_err = false;
     match args.command {
         Commands::Tokenize { filename } => {
+            let mut any_cc_err = false;
+
             let file_contents = fs::read_to_string(&filename)
                 .into_diagnostic()
                 .wrap_err_with(|| format!("reading '{}' failed", filename.display()))?;
@@ -51,6 +52,10 @@ fn main() -> miette::Result<()> {
                 println!("{token}");
             }
             println!("EOF  null");
+
+            if any_cc_err {
+                std::process::exit(65);
+            }
         }
         Commands::Parse { filename } => {
             let file_contents = fs::read_to_string(&filename)
@@ -58,7 +63,14 @@ fn main() -> miette::Result<()> {
                 .wrap_err_with(|| format!("reading '{}' failed", filename.display()))?;
 
             let parser = imp::Parser::new(&file_contents);
-            println!("{}", parser.parse_expression().unwrap());
+            match parser.parse_expression() {
+                Ok(tt) => println!("{tt}"),
+                Err(e) => {
+                    // TODO: match error line format
+                    eprintln!("{e:?}");
+                    std::process::exit(65);
+                }
+            }
         }
         Commands::Run { filename } => {
             let file_contents = fs::read_to_string(&filename)
@@ -68,10 +80,6 @@ fn main() -> miette::Result<()> {
             let parser = imp::Parser::new(&file_contents);
             println!("{}", parser.parse().unwrap());
         }
-    }
-
-    if any_cc_err {
-        std::process::exit(65);
     }
 
     Ok(())
