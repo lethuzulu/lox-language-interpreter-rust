@@ -1,5 +1,5 @@
-use lox_language_interpreter_rust::*;
 use clap::{Parser, Subcommand};
+use lox_language_interpreter_rust::*;
 use miette::{IntoDiagnostic, WrapErr};
 use std::fs;
 use std::path::PathBuf;
@@ -37,6 +37,11 @@ fn main() -> miette::Result<()> {
                                 unrecognized.line(),
                                 unrecognized.token
                             );
+                        } else if let Some(unterminated) =
+                            e.downcast_ref::<StringTerminationError>()
+                        {
+                            any_cc_err = true;
+                            eprintln!("[line {}] Error: Unterminated string.", unterminated.line(),);
                         }
                         continue;
                     }
