@@ -1,5 +1,5 @@
 use clap::{Parser, Subcommand};
-use codecrafters_interpreter as imp;
+use lox_language_interpreter_rust as imp;
 use miette::{IntoDiagnostic, WrapErr};
 use std::fs;
 use std::path::PathBuf;
